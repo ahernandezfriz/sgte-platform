@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 // Importamos tipos y enums
-import { Session, SessionLog, Task, Student, TreatmentPlan, SessionStatus, TaskGrade } from "@prisma/client"
+// Borramos SessionStatus y TaskGrade de la lista
+import { Session, SessionLog, Task, Student, TreatmentPlan } from "@prisma/client"
 // Importamos actions
 import { actualizarEstadoSesion, calificarActividad, guardarObservacionGeneral, agregarTareaASesion } from "@/actions/gestionar-sesion"
 // Importamos UI
@@ -44,7 +45,7 @@ export default function VistaSesionInteractiva({ sesion, bancoTareas }: Props) {
 
   // Handlers
   const handleCambioEstado = (nuevoEstado: string) => {
-    startTransition(() => actualizarEstadoSesion(sesion.id, nuevoEstado as SessionStatus))
+    startTransition(() => actualizarEstadoSesion(sesion.id, nuevoEstado))
   }
 
   const handleFinalizarSesion = () => {
@@ -58,7 +59,7 @@ export default function VistaSesionInteractiva({ sesion, bancoTareas }: Props) {
   }
 
   const handleCalificar = (idLog: string, nuevaNota: string) => {
-    startTransition(() => calificarActividad(idLog, nuevaNota as TaskGrade))
+    startTransition(() => calificarActividad(idLog, nuevaNota))
   }
 
   const handleAgregarTarea = () => {
