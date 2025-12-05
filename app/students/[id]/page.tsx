@@ -1,153 +1,76 @@
-import { db } from "@/lib/db"
-import { notFound } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import Link from "next/link"
-import { ModalAgendar } from "@/components/modal-agendar"
-import { GraficoProgreso } from "@/components/grafico-progreso" // <--- IMPORT NUEVO
+import { db } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { PlusCircle, Calendar } from "lucide-react";
 
-interface Props {
-  params: Promise<{ id: string }>
-}
+export default async function PerfilEstudiante({ params }: { params: { id: string } }) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-export default async function PaginaPerfilEstudiante({ params }: Props) {
-  const { id } = await params
-
-  // 1. Buscamos al estudiante
   const estudiante = await db.student.findUnique({
-    where: { id },
+    where: { id: params.id, userId },
     include: {
       treatmentPlans: {
-        orderBy: { year: 'desc' },
+        orderBy: { year: 'desc' }, // El más reciente primero
         include: {
-          sessions: {
-            orderBy: { date: 'desc' },
-            include: {
-              sessionLogs: true // <--- ¡CRUCIAL! Necesitamos esto para calcular el gráfico
-            }
-          }
+          _count: { select: { sessions: true } } // Contamos cuántas sesiones tiene
         }
       }
     }
-  })
+  });
 
-  if (!estudiante) {
-    return notFound()
-  }
-
-  const planActual = estudiante.treatmentPlans[0]
+  if (!estudiante) return <div>Estudiante no encontrado</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
-        
-        {/* --- ENCABEZADO --- */}
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 bg-white p-6 rounded-xl border shadow-sm">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-slate-800">{estudiante.name}</h1>
-              <Badge>{estudiante.course}</Badge>
-            </div>
-            <p className="text-slate-500 font-mono mt-1">RUT: {estudiante.rut || 'No registrado'}</p>
-            
-            <div className="flex gap-4 mt-4 text-sm text-slate-600">
-              <div className="flex items-center gap-1">
-                <span>🏥</span> <strong>Dx:</strong> {estudiante.diagnosis}
-              </div>
-              <div className="flex items-center gap-1">
-                <span>👤</span> <strong>Apoderado:</strong> {estudiante.guardianName}
-              </div>
-            </div>
-          </div>
+    <div className="p-6 space-y-6">
+      {/* Encabezado */}
+      <div className="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{estudiante.name}</h1>
+          <p className="text-slate-500">Historial de Tratamientos</p>
+        </div>
+        {/* Este botón podría abrir un Modal para crear un Plan Nuevo (Ej: 2025) */}
+        <Button>
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Nuevo Plan Anual
+        </Button>
+      </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <ModalAgendar estudiantes={[estudiante]} />
-            <Link href="/students">
-              <Button variant="ghost" size="sm">← Volver al directorio</Button>
+      {/* Lista de Planes (La Jerarquía) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {estudiante.treatmentPlans.map((plan) => (
+          <div key={plan.id} className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+            <div className="flex justify-between items-start mb-4">
+              <div className="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded-full text-sm">
+                Año {plan.year}
+              </div>
+              <span className="text-xs text-slate-400">
+                {plan._count.sessions} sesiones
+              </span>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              Objetivos y sesiones vinculadas a este periodo.
+            </p>
+
+            {/* 👇 ESTE LINK ES CLAVE: Entramos AL PLAN, no solo al estudiante */}
+            <Link href={`/students/${estudiante.id}/plans/${plan.id}`}>
+              <Button variant="outline" className="w-full">
+                <Calendar className="w-4 h-4 mr-2" />
+                Ver Sesiones del Plan
+              </Button>
             </Link>
           </div>
-        </div>
+        ))}
 
-        {/* --- SECCIÓN DE ESTADÍSTICAS (NUEVO) --- */}
-        {planActual && planActual.sessions.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* El Gráfico ocupa 2 columnas */}
-            <div className="md:col-span-2">
-              <GraficoProgreso datos={planActual.sessions} />
-            </div>
-
-            {/* Resumen rápido ocupa 1 columna */}
-            <div className="space-y-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold text-slate-800">
-                    {planActual.sessions.length}
-                  </div>
-                  <p className="text-xs text-slate-500 uppercase font-bold">Sesiones Totales</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold text-green-600">
-                    {planActual.sessions.filter(s => s.status === 'COMPLETED').length}
-                  </div>
-                  <p className="text-xs text-slate-500 uppercase font-bold">Finalizadas</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {planActual.sessions.filter(s => s.status === 'SCHEDULED').length}
-                  </div>
-                  <p className="text-xs text-slate-500 uppercase font-bold">Por realizar</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* --- HISTORIAL DE SESIONES --- */}
-        {!planActual ? (
-          <div className="p-12 text-center border-2 border-dashed rounded-lg bg-white">
-            <h3 className="text-lg font-semibold text-slate-600">Sin Plan de Tratamiento</h3>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2">
-              📂 Historial Detallado
-            </h2>
-
-            <div className="grid gap-4">
-              {planActual.sessions.map((sesion) => (
-                <Link key={sesion.id} href={`/sessions/${sesion.id}`}>
-                  <Card className="hover:border-blue-400 transition-colors cursor-pointer group">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${
-                          sesion.status === 'COMPLETED' ? 'bg-green-500' : 
-                          sesion.status === 'SCHEDULED' ? 'bg-blue-500' : 'bg-slate-300'
-                        }`} />
-                        <div>
-                          <p className="font-bold text-slate-800 group-hover:text-blue-700">
-                            {format(sesion.date, "EEEE d 'de' MMMM", { locale: es })}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            {sesion.objective || "Sin objetivo"}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">{sesion.status}</Badge>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+        {estudiante.treatmentPlans.length === 0 && (
+          <div className="col-span-full text-center py-10 text-slate-500 border-2 border-dashed rounded-xl">
+            No hay planes de tratamiento creados. Crea uno para comenzar a agendar sesiones.
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
