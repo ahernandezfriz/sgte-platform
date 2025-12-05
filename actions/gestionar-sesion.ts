@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-//ELIMINAMOS LA IMPORTACIÓN QUE FALLABA:
+//ELIMINAMOS LA IMPORTACIÓN QUE FALLABA (SessionStatus):
 
 // 1. Cambiar el estado de la sesión
 // Ahora "nuevoEstado" recibe un string simple
