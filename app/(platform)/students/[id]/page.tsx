@@ -5,12 +5,26 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PlusCircle, Calendar } from "lucide-react";
 
-export default async function PerfilEstudiante({ params }: { params: { id: string } }) {
+// Definimos el tipo de Props explícitamente para Next.js 15+
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function PerfilEstudiante(props: Props) {
+  // 1. Resolvemos la promesa de params antes de usar sus valores
+  const params = await props.params;
+  const { id } = params;
+
+  // 2. Verificamos autenticación
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
+  // 3. Consulta a base de datos usando el ID ya resuelto
   const estudiante = await db.student.findUnique({
-    where: { id: params.id, userId },
+    where: { 
+      id: id, // Ahora 'id' es un string válido, no una promesa
+      userId 
+    },
     include: {
       treatmentPlans: {
         orderBy: { year: 'desc' }, // El más reciente primero
