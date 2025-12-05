@@ -2,8 +2,7 @@
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-// ❌ ELIMINAMOS LA IMPORTACIÓN QUE FALLABA:
-// import { SessionStatus, TaskGrade } from "@prisma/client"
+//ELIMINAMOS LA IMPORTACIÓN QUE FALLABA:
 
 // 1. Cambiar el estado de la sesión
 // Ahora "nuevoEstado" recibe un string simple
