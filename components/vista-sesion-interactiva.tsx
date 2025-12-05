@@ -5,7 +5,7 @@ import { useState, useTransition } from "react"
 // Borramos SessionStatus y TaskGrade de la lista
 import { Session, SessionLog, Task, Student, TreatmentPlan } from "@prisma/client"
 // Importamos actions
-import { actualizarEstadoSesion, calificarActividad, guardarObservacionGeneral, agregarTareaASesion } from "@/actions/gestionar-sesion"
+import { actualizarEstadoSesion, calificarActividad, guardarObservacionGeneral, agregarTareaASesion } from "@/actions/session-actions"
 // Importamos UI
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
