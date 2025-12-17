@@ -2,34 +2,32 @@ import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+// Usaremos Dialog para el plan ya que es un formulario pequeño
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PlusCircle, Calendar } from "lucide-react";
+import Link from "next/link";
+import { crearPlan } from "@/actions/crear-plan"; // Importamos la action
 
-// Definimos el tipo de Props explícitamente para Next.js 15+
 type Props = {
   params: Promise<{ id: string }>;
 };
 
 export default async function PerfilEstudiante(props: Props) {
-  // 1. Resolvemos la promesa de params antes de usar sus valores
   const params = await props.params;
   const { id } = params;
 
-  // 2. Verificamos autenticación
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // 3. Consulta a base de datos usando el ID ya resuelto
   const estudiante = await db.student.findUnique({
-    where: { 
-      id: id, // Ahora 'id' es un string válido, no una promesa
-      userId 
-    },
+    where: { id: id, userId },
     include: {
       treatmentPlans: {
-        orderBy: { year: 'desc' }, // El más reciente primero
+        orderBy: { year: 'desc' },
         include: {
-          _count: { select: { sessions: true } } // Contamos cuántas sesiones tiene
+          _count: { select: { sessions: true } }
         }
       }
     }
@@ -45,14 +43,47 @@ export default async function PerfilEstudiante(props: Props) {
           <h1 className="text-2xl font-bold text-slate-900">{estudiante.name}</h1>
           <p className="text-slate-500">Historial de Tratamientos</p>
         </div>
-        {/* Este botón podría abrir un Modal para crear un Plan Nuevo (Ej: 2025) */}
-        <Button>
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Nuevo Plan Anual
-        </Button>
+        
+        {/* MODAL PARA CREAR NUEVO PLAN */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="w-4 h-4 mr-2" />
+              Nuevo Plan Anual
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nuevo Plan de Tratamiento</DialogTitle>
+              <DialogDescription>
+                Define el año para este nuevo ciclo de tratamiento.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* FORMULARIO DIRECTO A SERVER ACTION */}
+            <form action={crearPlan} className="space-y-4 mt-4">
+              {/* Input Oculto para enviar el ID del estudiante */}
+              <input type="hidden" name="studentId" value={estudiante.id} />
+              
+              <div className="space-y-2">
+                <Label>Año del Tratamiento</Label>
+                <Input 
+                  name="year" 
+                  type="number" 
+                  defaultValue={new Date().getFullYear()} 
+                  required 
+                />
+              </div>
+
+              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
+                Crear Plan
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Lista de Planes (La Jerarquía) */}
+      {/* Lista de Planes */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {estudiante.treatmentPlans.map((plan) => (
           <div key={plan.id} className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
@@ -69,21 +100,15 @@ export default async function PerfilEstudiante(props: Props) {
               Objetivos y sesiones vinculadas a este periodo.
             </p>
 
-            {/* 👇 ESTE LINK ES CLAVE: Entramos AL PLAN, no solo al estudiante */}
-            <Link href={`/students/${estudiante.id}/plans/${plan.id}`}>
-              <Button variant="outline" className="w-full">
-                <Calendar className="w-4 h-4 mr-2" />
-                Ver Sesiones del Plan
-              </Button>
-            </Link>
+       
+            <Button variant="outline" className="w-full" asChild>
+              <Link href={`/students/${estudiante.id}/plans/${plan.id}`}>
+              <Calendar className="w-4 h-4 mr-2" />
+              Ver Sesiones del Plan
+              </Link>
+            </Button>
           </div>
         ))}
-
-        {estudiante.treatmentPlans.length === 0 && (
-          <div className="col-span-full text-center py-10 text-slate-500 border-2 border-dashed rounded-xl">
-            No hay planes de tratamiento creados. Crea uno para comenzar a agendar sesiones.
-          </div>
-        )}
       </div>
     </div>
   );

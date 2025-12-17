@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { agendarSesion } from "@/actions/crear-sesion"
+import { crearSesion } from "@/actions/crear-sesion"
 import { Student } from "@prisma/client"
 
 export function ModalAgendar({ estudiantes }: { estudiantes: Student[] }) {
@@ -34,7 +34,7 @@ export function ModalAgendar({ estudiantes }: { estudiantes: Student[] }) {
           </DialogDescription>
         </DialogHeader>
 
-        <form action={agendarSesion} className="grid gap-4 py-4">
+        <form action={crearSesion} className="grid gap-4 py-4">
           
           <div className="grid gap-2">
             <Label>Estudiante</Label>

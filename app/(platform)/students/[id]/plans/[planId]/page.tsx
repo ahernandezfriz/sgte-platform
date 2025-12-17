@@ -2,41 +2,37 @@ import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea"; // Asegúrate de tener este componente ui
+// Usamos Sheet para el formulario de sesión
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import Link from "next/link";
 import { ArrowLeft, Calendar, CheckCircle2 } from "lucide-react";
+import { crearSesion } from "@/actions/crear-sesion"; // Importamos la action
 
-// Definimos los tipos de los parámetros esperados en la URL
-// NOTA: Renombra tu carpeta de '[id]' a '[planId]' para que coincida con esto
 type Props = {
   params: Promise<{
-    id: string;      // ID del estudiante (viene de la carpeta superior)
-    planId: string;  // ID del plan (debe coincidir con el nombre de la carpeta actual)
+    id: string;      // ID del estudiante
+    planId: string;  // ID del plan
   }>;
 };
 
 export default async function DetallePlan(props: Props) {
-  // 1. Await de los params (CRÍTICO para Next.js 15/16)
   const params = await props.params;
   const { id: studentId, planId } = params; 
 
-  // 2. Verificación de sesión
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // 3. Consulta segura usando el planId desestructurado
-  // Validación preventiva
-  if (!planId) return <div>Error: URL mal formada. Faltan parámetros.</div>;
+  if (!planId) return <div>Error: URL mal formada.</div>;
 
   const plan = await db.treatmentPlan.findUnique({
-    where: { 
-      id: planId, // Ahora sí enviamos un string, no undefined
-    },
+    where: { id: planId },
     include: {
       student: true,
       sessions: {
-        orderBy: {
-          date: "desc"
-        }
+        orderBy: { date: "desc" }
       }
     }
   });
@@ -65,11 +61,49 @@ export default async function DetallePlan(props: Props) {
             </p>
           </div>
           
-          {/* Botón para agendar nueva sesión en este plan */}
-          <Button>
-            <Calendar className="w-4 h-4 mr-2" />
-            Agendar Sesión
-          </Button>
+          {/* SHEET (PANEL LATERAL) PARA AGENDAR SESIÓN */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button>
+                <Calendar className="w-4 h-4 mr-2" />
+                Agendar Sesión
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Agendar Nueva Sesión</SheetTitle>
+                <SheetDescription>
+                  Ingresa los detalles para la próxima sesión de terapia.
+                </SheetDescription>
+              </SheetHeader>
+
+              {/* FORMULARIO */}
+              <form action={crearSesion} className="space-y-4 mt-6">
+                {/* Inputs ocultos para pasar IDs */}
+                <input type="hidden" name="planId" value={plan.id} />
+                <input type="hidden" name="studentId" value={studentId} />
+
+                <div className="space-y-2">
+                  <Label>Fecha</Label>
+                  <Input type="date" name="date" required />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Objetivo Principal</Label>
+                  <Input name="objective" placeholder="Ej: Fonema /R/" required />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Notas Generales (Opcional)</Label>
+                  <Textarea name="generalNotes" placeholder="Detalles extra..." />
+                </div>
+
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+                  Guardar Sesión
+                </Button>
+              </form>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
@@ -92,18 +126,24 @@ export default async function DetallePlan(props: Props) {
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">
-                      {/* Formateo simple de fecha, idealmente usar date-fns */}
+                    <p className="font-medium text-slate-900" suppressHydrationWarning>
                       {new Date(session.date).toLocaleDateString('es-ES', { 
                         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
                       })}
                     </p>
                     <p className="text-sm text-slate-500 truncate max-w-md">
-                      {session.notes || "Sin notas registradas"}
+                      {session.objective}
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">Ver detalle</Button>
+               
+               
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={`/sessions/${session.id}`}>
+                    Ver detalle &rarr;
+                  </Link>
+                </Button>
+              
               </li>
             ))}
           </ul>

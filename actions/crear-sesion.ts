@@ -2,42 +2,43 @@
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
+// import { redirect } from "next/navigation" // Opcional si quieres redirigir al detalle de la sesión
 
-export async function agendarSesion(formData: FormData) {
-  // 1. Extraer datos del formulario HTML
-  const studentId = formData.get("studentId") as string
-  const fechaStr = formData.get("date") as string // Viene como YYYY-MM-DD
+export async function crearSesion(formData: FormData) {
+  
+  // 1. Seguridad
+  const { userId } = await auth()
+  if (!userId) return
+
+  // 2. Extraer datos del formulario HTML
+  const planId = formData.get("planId") as string // ID del Plan (TreatmentPlan)
+  const studentId = formData.get("studentId") as string // Solo para el redirect/revalidate
+  const fechaStr = formData.get("date") as string 
   const objetivo = formData.get("objective") as string
+  const notas = formData.get("generalNotes") as string
 
-  if (!studentId || !fechaStr) {
+  if (!planId || !fechaStr) {
     throw new Error("Faltan datos obligatorios")
   }
 
-  // 2. Buscar el Plan de Tratamiento del estudiante para este año
-  // (Asumimos que existe por el seed. En un futuro haremos que se cree solo)
-  const plan = await db.treatmentPlan.findFirst({
-    where: { studentId: studentId }
-  })
-
-  if (!plan) {
-    throw new Error("El estudiante no tiene un plan de tratamiento activo.")
-  }
-
   // 3. Crear la Sesión
-  // Convertimos el string de fecha a objeto Date y le sumamos horas para evitar problemas de zona horaria
+  // Ajuste de fecha para guardar correctamente
   const fechaSesion = new Date(fechaStr + "T12:00:00")
 
-  const nuevaSesion = await db.session.create({
+  await db.session.create({
     data: {
       date: fechaSesion,
       objective: objetivo,
+      generalNotes: notas,
       status: "SCHEDULED",
-      treatmentPlanId: plan.id
+      treatmentPlanId: planId
     }
   })
 
-  // 4. Actualizar el Dashboard y redirigir
-  revalidatePath("/")
-  redirect(`/sessions/${nuevaSesion.id}`)
+  // 4. Actualizar la vista del listado de sesiones
+  revalidatePath(`/students/${studentId}/plans/${planId}`)
+  
+  // Opcional: Si quieres ir al detalle de esa sesión específica:
+  // redirect(`/sessions/${nuevaSesion.id}`) 
 }
