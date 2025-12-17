@@ -29,8 +29,8 @@ export function GraficoProgreso({ datos }: Props) {
       }
     })
     // Recharts dibuja de izquierda a derecha, aseguramos el orden por fecha
-    .reverse() 
-
+    //.reverse() // NOTA: No usamos .reverse() porque la DB ya viene ordenada ASC
+ 
   if (dataGrafico.length < 2) {
     return (
       <Card>
