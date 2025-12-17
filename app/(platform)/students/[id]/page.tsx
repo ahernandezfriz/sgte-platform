@@ -1,3 +1,10 @@
+/*
+Perfil del estudiante
+En este archivo se muestra el perfil del estudiante y sus planes de tratamiento, 
+tambien es donde se crea un nuevo plan de tratamiento desde el boton nuevo Plan anual
+------------------------------------------------------------------------------------------
+*/
+
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
