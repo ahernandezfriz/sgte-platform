@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Importamos Card
 import Link from "next/link";
-import { ArrowLeft, Calendar, CheckCircle2, Clock, PlayCircle, User, Phone, BookOpen, FileText } from "lucide-react"; 
+import { ArrowLeft, Calendar, CheckCircle2, Clock, PlayCircle, User, Phone, BookOpen, FileText, CheckCircle } from "lucide-react"; 
 import { crearSesion } from "@/actions/crear-sesion";
 import { GraficoProgreso } from "@/components/grafico-progreso"; // <--- Importamos el gráfico
 
@@ -180,65 +180,89 @@ export default async function DetallePlan(props: Props) {
                 <p>No hay sesiones registradas en este plan todavía.</p>
             </div>
             ) : (
-            <ul className="divide-y">
-                {plan.sessions.map((session) => {
-                const isCompleted = session.status === "COMPLETED";
+                <div>
+                  {/* Contenedor tipo Lista con divisiones suaves */}
+<ul className="divide-y divide-slate-100">
+  {plan.sessions.map((session) => {
+    const isCancelled = session.status === 'CANCELLED';
+    const isCompleted = session.status === 'COMPLETED';
+    const isPending = !isCancelled && !isCompleted; // Estado Pendiente
 
-                return (
-                    <li key={session.id} className="p-4 hover:bg-slate-50 transition flex justify-between items-center group">
-                    <div className="flex items-center gap-4">
-                        
-                        {/* ICONO DINÁMICO */}
-                        {isCompleted ? (
-                            <div className="bg-green-100 p-2 rounded-full ring-2 ring-white shadow-sm" title="Sesión Realizada">
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            </div>
-                        ) : (
-                            <div className="bg-slate-100 p-2 rounded-full ring-2 ring-white shadow-sm" title="Pendiente por realizar">
-                                <Clock className="w-5 h-5 text-slate-500" />
-                            </div>
-                        )}
+    return (
+      <li key={session.id} className="group">
+        <Link 
+          href={`/sessions/${session.id}`}
+          className="block py-4 px-2 hover:bg-slate-50 rounded-lg transition-colors"
+        >
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+            
+            {/* IZQUIERDA: Fecha + Etiquetas + Descripción */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                {/* FECHA */}
+                <span className={`font-semibold text-base ${isCancelled ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                   {new Date(session.date).toLocaleDateString('es-ES', { 
+                      weekday: 'long', 
+                      day: 'numeric', 
+                      month: 'long' 
+                   })}
+                </span>
 
-                        <div>
-                        <p className="font-medium text-slate-900 flex items-center gap-2" suppressHydrationWarning>
-                            {new Date(session.date).toLocaleDateString('es-ES', { 
-                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-                            })}
-                            
-                            {!isCompleted && (
-                                <span className="text-[10px] uppercase tracking-wider font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                                    Pendiente
-                                </span>
-                            )}
-                        </p>
-                        <p className="text-sm text-slate-500 truncate max-w-md group-hover:text-blue-600 transition-colors">
-                            {session.objective || "Sin objetivo definido"}
-                        </p>
-                        </div>
-                    </div>
-                    
-                    <Button 
-                        variant={isCompleted ? "outline" : "default"} 
-                        size="sm" 
-                        className={!isCompleted ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm" : "border-slate-300 text-slate-600 hover:text-slate-900"}
-                        asChild
-                    >
-                        <Link href={`/sessions/${session.id}`}>
-                        {isCompleted ? (
-                            <>Ver detalles</>
-                        ) : (
-                            <>
-                                <PlayCircle className="w-4 h-4 mr-2" />
-                                Iniciar
-                            </>
-                        )}
-                        </Link>
-                    </Button>
-                    
-                    </li>
-                );
-                })}
-            </ul>
+                {/* ETIQUETAS DE ESTADO (Badges) */}
+                {isCancelled && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                    🚫 Suspendida
+                  </span>
+                )}
+                {isCompleted && (
+                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                    ✅ Realizada
+                   </span>
+                )}
+                {/* ETIQUETA PENDIENTE (NUEVA) */}
+                {isPending && (
+                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-blue-700">
+                    📅 Pendiente
+                   </span>
+                )}
+              </div>
+
+              {/* DESCRIPCIÓN O MOTIVO */}
+              {isCancelled ? (
+                 <p className="text-sm text-red-600/90 font-medium">
+                   Motivo: {session.cancellationReason}
+                 </p>
+              ) : (
+                 <p className="text-sm text-slate-500">
+                   🎯 {session.objective || "Sin objetivo definido"}
+                 </p>
+              )}
+            </div>
+
+            {/* DERECHA: Call to Action */}
+            <div className="flex items-center shrink-0 mt-2 sm:mt-0">
+               {isCancelled ? (
+                  <span className="text-xs text-slate-400 group-hover:text-slate-600 transition-colors">
+                    Ver detalles &rarr;
+                  </span>
+               ) : isCompleted ? (
+                  <span className="text-sm font-medium text-green-600 group-hover:text-green-700">
+                     Ver resumen &rarr;
+                  </span>
+               ) : (
+                  <span className="text-sm font-bold text-slate-900 group-hover:underline underline-offset-4 decoration-slate-900">
+                     Iniciar Sesión &rarr;
+                  </span>
+               )}
+            </div>
+
+          </div>
+        </Link>
+      </li>
+    )
+  })}
+</ul>
+                </div>
             )}
         </div>
       </div>

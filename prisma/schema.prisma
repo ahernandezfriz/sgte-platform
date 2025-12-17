@@ -40,14 +40,15 @@ model TreatmentPlan {
 }
 
 model Session {
-  id              String       @id @default(uuid())
-  date            DateTime
-  objective       String?
-  status          String       @default("SCHEDULED")
-  generalNotes    String?
-  treatmentPlanId String
-  treatmentPlan   TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
-  sessionLogs     SessionLog[]
+  id                 String       @id @default(uuid())
+  date               DateTime
+  objective          String?
+  status             String       @default("SCHEDULED")
+  cancellationReason String?
+  generalNotes       String?
+  treatmentPlanId    String
+  treatmentPlan      TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
+  sessionLogs        SessionLog[]
 }
 
 model SessionLog {
